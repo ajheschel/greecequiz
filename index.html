@@ -114,24 +114,13 @@
 </head>
 <body class="min-h-screen p-4 flex flex-col items-center justify-center">
 
-    <!-- Setup Screen for Web Preview -->
-    <div id="setup-screen" class="max-w-xl w-full parchment-bg p-8 rounded-lg shadow-2xl text-center">
-        <h1 class="text-3xl font-bold text-amber-900 mb-4 uppercase">Map Setup</h1>
-        <p class="mb-6 text-amber-800">Because this web preview runs in a secure environment, it cannot automatically grab files from your computer. Please select your <strong>"Ancient Greece Map.jpg"</strong> to start. It will save securely in your browser for next time!</p>
-        <input type="file" id="image-upload" accept="image/*" class="hidden">
-        <label for="image-upload" class="bg-amber-800 text-white px-8 py-4 rounded-lg cursor-pointer hover:bg-amber-700 transition-all font-bold inline-block shadow-lg">
-            SELECT MAP IMAGE
-        </label>
-    </div>
-
-    <!-- Game Screen is hidden until map is provided -->
-    <div id="game-screen" class="max-w-6xl w-full parchment-bg rounded-lg shadow-2xl overflow-hidden flex flex-col md:flex-row hidden">
+    <div id="game-screen" class="max-w-6xl w-full parchment-bg rounded-lg shadow-2xl overflow-hidden flex flex-col md:flex-row">
         <div class="flex-1 p-4">
             <header class="mb-4 text-center">
                 <h1 class="text-2xl font-bold text-amber-900 uppercase tracking-widest">Entrance Ticket Quiz</h1>
             </header>
             <div class="game-canvas" id="canvas-container">
-                <img id="map-image" src="" alt="Study Map">
+                <img id="map-image" src="ancient-greece-map.png" alt="Study Map" onerror="this.onerror=null; this.src='https://placehold.co/800x600/f4e4bc/3e2723?text=Image+Missing%5CnPlease+ensure+%22ancient-greece-map.png%22%5Cnis+uploaded+to+your+repository.';">
                 <div class="dot-overlay" id="overlay"></div>
             </div>
         </div>
@@ -156,10 +145,7 @@
                 </div>
             </div>
             <div class="space-y-2 mt-4">
-                <button id="clear-map" class="w-full bg-red-900 hover:bg-red-800 text-white py-2 rounded text-xs uppercase font-bold transition-colors">
-                    Remove Saved Map
-                </button>
-                <button onclick="restartGame()" class="w-full bg-stone-600 hover:bg-stone-500 text-white py-2 rounded text-xs uppercase font-bold transition-colors">
+                <button onclick="restartGame()" class="w-full bg-stone-600 hover:bg-stone-500 text-white py-3 rounded text-sm uppercase font-bold transition-colors">
                     Restart Quiz
                 </button>
             </div>
@@ -201,52 +187,11 @@
         const scoreDisplay = document.getElementById('score');
         const progressBar = document.getElementById('progress-bar');
         const feedback = document.getElementById('feedback');
-        
-        const imageUpload = document.getElementById('image-upload');
-        const mapImage = document.getElementById('map-image');
-        const setupScreen = document.getElementById('setup-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const clearBtn = document.getElementById('clear-map');
 
-        // Check local storage on load
+        // Start game instantly on load
         window.onload = () => {
-            const savedMap = localStorage.getItem('ancient_greece_map');
-            if (savedMap) {
-                mapImage.src = savedMap;
-                setupScreen.classList.add('hidden');
-                gameScreen.classList.remove('hidden');
-                initGame();
-            }
+            initGame();
         };
-
-        // Handle File Upload
-        imageUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const base64Image = event.target.result;
-                    mapImage.src = base64Image;
-                    
-                    try {
-                        localStorage.setItem('ancient_greece_map', base64Image);
-                    } catch (e) {
-                        console.warn("Storage full, map won't persist after refresh.");
-                    }
-
-                    setupScreen.classList.add('hidden');
-                    gameScreen.classList.remove('hidden');
-                    initGame();
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Clear Map Button
-        clearBtn.addEventListener('click', () => {
-            localStorage.removeItem('ancient_greece_map');
-            location.reload();
-        });
 
         function initGame() {
             overlay.innerHTML = '';
