@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ancient Greece Geography Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Fauna+One&display=swap');
+        
+        :root {
+            --ancient-gold: #c5a059;
+            --ancient-blue: #2a5a7a;
+            --parchment: #f4e4bc;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            font-family: 'Fauna One', serif;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        h1, h2 {
+            font-family: 'Cinzel', serif;
+        }
+
+        .game-canvas {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 4px solid #3e2723;
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #map-image {
+            display: block;
+            width: 100%;
+            height: auto;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .dot-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .hit-zone {
+            position: absolute;
+            width: 7%;
+            height: 7%;
+            border-radius: 50%;
+            cursor: pointer;
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.01);
+            border: 2px solid transparent;
+            transform: translate(-50%, -50%);
+            transition: all 0.2s ease;
+            z-index: 5;
+        }
+
+        .hit-zone:hover {
+            background: rgba(197, 160, 89, 0.2);
+            border-color: var(--ancient-gold);
+        }
+
+        .hit-zone.correct {
+            background: rgba(76, 175, 80, 0.2) !important;
+            border-color: #2e7d32 !important;
+            pointer-events: none;
+        }
+
+        .hit-zone.wrong {
+            background: rgba(244, 67, 54, 0.4) !important;
+            border-color: #c62828 !important;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+            25% { transform: translate(-50%, -50%) translateX(-5px); }
+            75% { transform: translate(-50%, -50%) translateX(5px); }
+        }
+
+        .reveal-label {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 1px 4px;
+            border: 1px solid #2e7d32;
+            font-size: 9px;
+            font-weight: bold;
+            color: #1b5e20;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            z-index: 10;
+            border-radius: 2px;
+            text-transform: uppercase;
+        }
+
+        .parchment-bg {
+            background-color: var(--parchment);
+            background-image: url("https://www.transparenttextures.com/patterns/dark-matter.png");
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <!-- Setup Screen for Web Preview -->
+    <div id="setup-screen" class="max-w-xl w-full parchment-bg p-8 rounded-lg shadow-2xl text-center">
+        <h1 class="text-3xl font-bold text-amber-900 mb-4 uppercase">Map Setup</h1>
+        <p class="mb-6 text-amber-800">Because this web preview runs in a secure environment, it cannot automatically grab files from your computer. Please select your <strong>"Ancient Greece Map.jpg"</strong> to start. It will save securely in your browser for next time!</p>
+        <input type="file" id="image-upload" accept="image/*" class="hidden">
+        <label for="image-upload" class="bg-amber-800 text-white px-8 py-4 rounded-lg cursor-pointer hover:bg-amber-700 transition-all font-bold inline-block shadow-lg">
+            SELECT MAP IMAGE
+        </label>
+    </div>
+
+    <!-- Game Screen is hidden until map is provided -->
+    <div id="game-screen" class="max-w-6xl w-full parchment-bg rounded-lg shadow-2xl overflow-hidden flex flex-col md:flex-row hidden">
+        <div class="flex-1 p-4">
+            <header class="mb-4 text-center">
+                <h1 class="text-2xl font-bold text-amber-900 uppercase tracking-widest">Entrance Ticket Quiz</h1>
+            </header>
+            <div class="game-canvas" id="canvas-container">
+                <img id="map-image" src="" alt="Study Map">
+                <div class="dot-overlay" id="overlay"></div>
+            </div>
+        </div>
+
+        <div class="w-full md:w-80 bg-stone-800 text-stone-100 p-8 flex flex-col justify-between">
+            <div>
+                <div class="mb-8">
+                    <h2 class="text-xl text-amber-400 mb-2 font-bold uppercase text-xs tracking-widest">Locate This:</h2>
+                    <div id="target-location" class="text-2xl font-bold bg-stone-700 p-4 rounded border-2 border-amber-600 text-center shadow-inner min-h-[4.5rem] flex items-center justify-center">
+                        ---
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span>Progress:</span>
+                        <span id="score" class="font-bold text-amber-400">0 / 14</span>
+                    </div>
+                    <div class="w-full bg-stone-700 h-4 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="bg-amber-500 h-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div id="feedback" class="text-center font-bold text-lg h-8"></div>
+                </div>
+            </div>
+            <div class="space-y-2 mt-4">
+                <button id="clear-map" class="w-full bg-red-900 hover:bg-red-800 text-white py-2 rounded text-xs uppercase font-bold transition-colors">
+                    Remove Saved Map
+                </button>
+                <button onclick="restartGame()" class="w-full bg-stone-600 hover:bg-stone-500 text-white py-2 rounded text-xs uppercase font-bold transition-colors">
+                    Restart Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="victory-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+        <div class="bg-amber-50 p-10 rounded-lg max-w-sm w-full text-center border-4 border-amber-600">
+            <h2 class="text-4xl text-amber-900 mb-4 font-bold">Great Job!</h2>
+            <p class="text-stone-700 mb-8">You've mastered the 14 key locations of Ancient Greece.</p>
+            <button onclick="restartGame()" class="bg-amber-800 text-white px-10 py-3 rounded-full font-bold">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const locations = [
+            { name: "Crete", num: "1", x: 48.5, y: 88.5 },
+            { name: "Athens", num: "2", x: 37, y: 54.5 },
+            { name: "Mt. Olympus", num: "3", x: 21, y: 26 },
+            { name: "Isthmus of Corinth", num: "4", x: 33.5, y: 55.5 },
+            { name: "Asia Minor", num: "5", x: 80, y: 31 },
+            { name: "Troy", num: "6", x: 54.5, y: 27.5 },
+            { name: "Ionian Sea", num: "7", x: 2.5, y: 53 },
+            { name: "Gulf of Corinth", num: "8", x: 28, y: 52 },
+            { name: "Sparta", num: "9", x: 28.5, y: 67 },
+            { name: "Sea of Crete", num: "10", x: 48.5, y: 78.5 },
+            { name: "Macedonia", num: "11", x: 22.5, y: 4.5 },
+            { name: "Aegean Sea", num: "12", x: 45.5, y: 43.5 },
+            { name: "Mediterranean Sea", num: "13", x: 9.5, y: 81.5 },
+            { name: "Peloponnesus", num: "14", x: 23, y: 61 }
+        ];
+
+        let remaining = [...locations];
+        let currentTarget = null;
+        let score = 0;
+
+        const overlay = document.getElementById('overlay');
+        const targetDisplay = document.getElementById('target-location');
+        const scoreDisplay = document.getElementById('score');
+        const progressBar = document.getElementById('progress-bar');
+        const feedback = document.getElementById('feedback');
+        
+        const imageUpload = document.getElementById('image-upload');
+        const mapImage = document.getElementById('map-image');
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const clearBtn = document.getElementById('clear-map');
+
+        // Check local storage on load
+        window.onload = () => {
+            const savedMap = localStorage.getItem('ancient_greece_map');
+            if (savedMap) {
+                mapImage.src = savedMap;
+                setupScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                initGame();
+            }
+        };
+
+        // Handle File Upload
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const base64Image = event.target.result;
+                    mapImage.src = base64Image;
+                    
+                    try {
+                        localStorage.setItem('ancient_greece_map', base64Image);
+                    } catch (e) {
+                        console.warn("Storage full, map won't persist after refresh.");
+                    }
+
+                    setupScreen.classList.add('hidden');
+                    gameScreen.classList.remove('hidden');
+                    initGame();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Clear Map Button
+        clearBtn.addEventListener('click', () => {
+            localStorage.removeItem('ancient_greece_map');
+            location.reload();
+        });
+
+        function initGame() {
+            overlay.innerHTML = '';
+            locations.forEach(loc => {
+                const zone = document.createElement('div');
+                zone.className = 'hit-zone';
+                zone.style.left = loc.x + '%';
+                zone.style.top = loc.y + '%';
+                zone.onclick = (e) => handleHit(e, loc);
+                overlay.appendChild(zone);
+            });
+            initRound();
+        }
+
+        function restartGame() {
+            // Reset state
+            remaining = [...locations];
+            score = 0;
+            document.getElementById('victory-modal').classList.add('hidden');
+            document.getElementById('victory-modal').style.display = 'none';
+            
+            // Clear visual indicators
+            updateUI();
+            initGame();
+        }
+
+        function initRound() {
+            if (remaining.length === 0) {
+                document.getElementById('victory-modal').style.display = 'flex';
+                document.getElementById('victory-modal').classList.remove('hidden');
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * remaining.length);
+            currentTarget = remaining[randomIndex];
+            targetDisplay.textContent = currentTarget.name;
+            feedback.textContent = "";
+        }
+
+        function handleHit(e, loc) {
+            if (loc.name === currentTarget.name) {
+                e.target.classList.add('correct');
+                revealLabel(loc);
+                score++;
+                remaining = remaining.filter(l => l.name !== loc.name);
+                feedback.textContent = "✓ Found it!";
+                feedback.className = "text-center font-bold text-lg h-8 text-green-500";
+                updateUI();
+                setTimeout(initRound, 600);
+            } else {
+                e.target.classList.add('wrong');
+                feedback.textContent = "✕ Try Again";
+                feedback.className = "text-center font-bold text-lg h-8 text-red-500";
+                setTimeout(() => e.target.classList.remove('wrong'), 400);
+            }
+        }
+
+        function revealLabel(loc) {
+            const label = document.createElement('div');
+            label.className = 'reveal-label';
+            label.style.left = loc.x + '%';
+            label.style.top = loc.y + '%';
+            label.textContent = loc.name;
+            overlay.appendChild(label);
+        }
+
+        function updateUI() {
+            scoreDisplay.textContent = `${score} / ${locations.length}`;
+            const percent = (score / locations.length) * 100;
+            progressBar.style.width = `${percent}%`;
+            feedback.textContent = "";
+        }
+    </script>
+</body>
+</html>
